@@ -1,29 +1,23 @@
 /**
  * 数据库配置和连接池管理
+ * 支持 PostgreSQL 和 MySQL
  */
 
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 require('dotenv').config();
 
-// 创建数据库连接池
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',     // 数据库地址
-  port: process.env.DB_PORT || 3306,            // 数据库端口
-  user: process.env.DB_USER || 'root',          // 数据库用户名
-  password: process.env.DB_PASSWORD || '',      // 数据库密码
-  database: process.env.DB_NAME || 'rating_system', // 数据库名称
-  waitForConnections: true,                     // 等待可用连接
-  connectionLimit: 10,                          // 连接池最大连接数
-  queueLimit: 0,                                // 队列限制（0表示不限制）
-  charset: 'utf8mb4'                            // 字符集
+// 创建PostgreSQL连接池
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,  // Render提供的数据库URL
+  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
 });
 
 // 测试数据库连接
 async function testConnection() {
   try {
-    const connection = await pool.getConnection();
+    const client = await pool.connect();
     console.log('✅ 数据库连接成功！');
-    connection.release(); // 释放连接回连接池
+    client.release(); // 释放连接回连接池
     return true;
   } catch (error) {
     console.error('❌ 数据库连接失败:', error.message);
@@ -31,11 +25,20 @@ async function testConnection() {
   }
 }
 
-// 执行查询的辅助函数
-async function query(sql, params) {
+// 执行查询的辅助函数（兼容PostgreSQL）
+async function query(sql, params = []) {
   try {
-    const [rows] = await pool.execute(sql, params);
-    return rows;
+    // PostgreSQL 使用 $1, $2, $3... 作为占位符
+    // 将 MySQL 的 ? 替换为 PostgreSQL 的 $1, $2...
+    let pgSql = sql;
+    let paramIndex = 1;
+    while (pgSql.includes('?')) {
+      pgSql = pgSql.replace('?', `$${paramIndex}`);
+      paramIndex++;
+    }
+    
+    const result = await pool.query(pgSql, params);
+    return result.rows;
   } catch (error) {
     console.error('数据库查询错误:', error);
     throw error;
