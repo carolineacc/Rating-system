@@ -1,0 +1,92 @@
+/**
+ * 全局样式
+ */
+
+/* 重置默认样式 */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 
+               'Hiragino Sans GB', 'Microsoft YaHei', 'Helvetica Neue', 
+               Helvetica, Arial, sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+}
+
+.app {
+  min-height: 100vh;
+}
+
+/* 页面容器 */
+.page-container {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* 卡片容器 */
+.card-container {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 40px;
+  width: 100%;
+  max-width: 500px;
+}
+
+/* 标题 */
+.page-title {
+  text-align: center;
+  margin-bottom: 30px;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+/* 表单 */
+.form-container {
+  width: 100%;
+}
+
+/* 按钮 */
+.full-width-button {
+  width: 100%;
+}
+
+/* 链接 */
+.text-center {
+  text-align: center;
+  margin-top: 16px;
+}
+
+/* 评分容器 */
+.rating-container {
+  background: #f0f2f5;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+/* 管理后台容器 */
+.admin-container {
+  background: #f0f2f5;
+  min-height: 100vh;
+}
+
+/* 响应式 */
+@media (max-width: 768px) {
+  .card-container {
+    padding: 24px;
+    max-width: 100%;
+  }
+  
+  .rating-container,
+  .admin-container {
+    padding: 16px;
+  }
+}
