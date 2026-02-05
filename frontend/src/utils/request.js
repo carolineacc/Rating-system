@@ -51,41 +51,37 @@ request.interceptors.response.use(
   },
   (error) => {
     // 处理错误响应
-    let errorMessage = '请求失败，请稍后重试';
+    let errorMessage = 'Request failed. Please try again later.';
     
     if (error.response) {
-      // 服务器返回了错误响应
       const { status, data } = error.response;
       
       switch (status) {
         case 400:
-          errorMessage = data.message || '请求参数错误';
+          errorMessage = data.message || 'Invalid request parameters';
           break;
         case 401:
-          errorMessage = data.message || '未登录或登录已过期';
-          // 清除Token并跳转到登录页
+          errorMessage = data.message || 'Not logged in or session expired';
           removeItem(STORAGE_KEYS.TOKEN);
           removeItem(STORAGE_KEYS.USER);
           window.location.href = '/login';
           break;
         case 403:
-          errorMessage = data.message || '没有权限访问';
+          errorMessage = data.message || 'Access denied';
           break;
         case 404:
-          errorMessage = data.message || '请求的资源不存在';
+          errorMessage = data.message || 'Resource not found';
           break;
         case 500:
-          errorMessage = data.message || '服务器错误';
+          errorMessage = data.message || 'Server error';
           break;
         default:
-          errorMessage = data.message || `请求失败 (${status})`;
+          errorMessage = data.message || `Request failed (${status})`;
       }
     } else if (error.request) {
-      // 请求已发出，但没有收到响应
-      errorMessage = '网络连接失败，请检查网络';
+      errorMessage = 'Network error. Please check your connection.';
     } else {
-      // 请求配置出错
-      errorMessage = error.message || '请求配置错误';
+      errorMessage = error.message || 'Request configuration error';
     }
     
     // 显示错误提示
