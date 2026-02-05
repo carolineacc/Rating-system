@@ -65,7 +65,7 @@ function RatingPage() {
    */
   const handleLogout = () => {
     logout();
-    message.success('已退出登录');
+    message.success('Logged out successfully');
     navigate('/login');
   };
 
@@ -75,7 +75,7 @@ function RatingPage() {
   const handleSubmit = async (values) => {
     // 如果没有订单号，提示用户输入
     if (!values.orderNo) {
-      message.warning('请输入订单号');
+      message.warning('Please enter order number');
       return;
     }
 
@@ -92,7 +92,7 @@ function RatingPage() {
         isAnonymous: 0
       });
 
-      message.success('评分提交成功，感谢您的反馈！');
+      message.success('Rating submitted successfully. Thank you for your feedback!');
       
       // 重置表单
       form.resetFields();
@@ -113,12 +113,12 @@ function RatingPage() {
       {/* 顶部导航栏 */}
       <Header style={{ background: '#fff', padding: '0 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
         <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
-          <StarOutlined /> 订单评分系统
+          <StarOutlined /> Order Rating System
         </Title>
         <Space>
-          <Text>欢迎，{user?.username || user?.email}</Text>
+          <Text>Welcome, {user?.username || user?.email}</Text>
           <Button icon={<LogoutOutlined />} onClick={handleLogout}>
-            退出登录
+            Logout
           </Button>
         </Space>
       </Header>
@@ -129,8 +129,8 @@ function RatingPage() {
           {/* 如果订单已评分，显示提示 */}
           {orderNo && hasRated && !checkingRated && (
             <Alert
-              message="该订单已评分"
-              description="每个订单只能评分一次，您已经对该订单进行过评价。"
+              message="This order has been rated"
+              description="Each order can only be rated once. You have already submitted a rating for this order."
               type="info"
               showIcon
               style={{ marginBottom: 24 }}
@@ -138,8 +138,8 @@ function RatingPage() {
           )}
 
           <Card>
-            <Title level={4}>订单评价</Title>
-            <Text type="secondary">您的反馈对我们非常重要，请如实评价。</Text>
+            <Title level={4}>Order Review</Title>
+            <Text type="secondary">Your feedback is very important to us. Please rate honestly.</Text>
             
             <Divider />
 
@@ -159,12 +159,12 @@ function RatingPage() {
             >
               {/* 订单号 */}
               <Form.Item
-                label="订单号"
+                label="Order Number"
                 name="orderNo"
-                rules={[{ required: true, message: '请输入订单号' }]}
+                rules={[{ required: true, message: 'Please enter order number' }]}
               >
                 <Input 
-                  placeholder="请输入订单号" 
+                  placeholder="Please enter order number" 
                   size="large"
                   disabled={!!orderNo}
                 />
@@ -174,43 +174,43 @@ function RatingPage() {
               <Form.Item
                 label={
                   <Space>
-                    <span>总体评分</span>
-                    <Tag color="red">必填</Tag>
+                    <span>Overall Rating</span>
+                    <Tag color="red">Required</Tag>
                   </Space>
                 }
                 name="overallScore"
-                rules={[{ required: true, message: '请进行总体评分' }]}
+                rules={[{ required: true, message: 'Please give an overall rating' }]}
               >
                 <Rate allowHalf style={{ fontSize: 32 }} />
               </Form.Item>
 
               {/* 详细评分维度 - 可选 */}
-              <Divider orientation="left">详细评分（可选）</Divider>
+              <Divider orientation="left">Detailed Rating (Optional)</Divider>
 
-              <Form.Item label="服务态度" name="serviceAttitude">
+              <Form.Item label="Service Attitude" name="serviceAttitude">
                 <Rate allowHalf />
               </Form.Item>
 
-              <Form.Item label="响应速度" name="responseSpeed">
+              <Form.Item label="Response Speed" name="responseSpeed">
                 <Rate allowHalf />
               </Form.Item>
 
-              <Form.Item label="问题解决能力" name="problemSolving">
+              <Form.Item label="Problem-solving Ability" name="problemSolving">
                 <Rate allowHalf />
               </Form.Item>
 
-              <Form.Item label="专业程度" name="professionalism">
+              <Form.Item label="Professionalism" name="professionalism">
                 <Rate allowHalf />
               </Form.Item>
 
               {/* 评价内容 - 可选 */}
               <Form.Item
-                label="评价内容（可选）"
+                label="Review Content (Optional)"
                 name="comment"
               >
                 <TextArea
                   rows={4}
-                  placeholder="请分享您的使用体验，您的反馈将帮助我们提升服务质量..."
+                  placeholder="Please share your experience. Your feedback helps us improve our service..."
                   maxLength={1000}
                   showCount
                 />
@@ -226,14 +226,14 @@ function RatingPage() {
                   loading={loading}
                   disabled={orderNo && hasRated}
                 >
-                  {orderNo && hasRated ? '该订单已评分' : '提交评分'}
+                  {orderNo && hasRated ? 'Already rated' : 'Submit Rating'}
                 </Button>
               </Form.Item>
 
               {/* 提示文字 */}
               <Alert
                 message="Each order may only be rated once"
-                description="每个订单仅可评分一次，提交后无法修改。"
+                description="Each order can only be rated once. Ratings cannot be modified after submission."
                 type="warning"
                 showIcon
               />
