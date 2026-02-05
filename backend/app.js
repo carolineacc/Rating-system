@@ -36,7 +36,7 @@ app.use(helmet()); // 设置HTTP安全头
 
 // 2. CORS跨域配置（允许前端访问后端API）
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'], // 允许的前端地址
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://rating-system-frontend.onrender.com'], // 允许的前端地址
   credentials: true // 允许携带Cookie
 }));
 
@@ -161,3 +161,4 @@ startServer();
 
 // 导出app供测试使用
 module.exports = app;
+
