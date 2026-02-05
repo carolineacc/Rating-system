@@ -30,6 +30,7 @@ export default defineConfig({
   build: {
     outDir: 'dist',    // 输出目录
     sourcemap: false,  // 不生成sourcemap（减小文件大小）
-    minify: 'terser',  // 使用terser压缩
+    minify: 'esbuild',  // 使用terser压缩
   }
 })
+
