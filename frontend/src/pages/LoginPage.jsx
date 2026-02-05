@@ -20,14 +20,14 @@ function LoginPage() {
    */
   const handleSendCode = async (email) => {
     if (!email) {
-      message.warning('请先输入邮箱地址');
+      message.warning('Please enter your email address first');
       return;
     }
 
     try {
       setSendingCode(true);
       await sendEmailCode(email);
-      message.success('验证码已发送，请查收邮件');
+      message.success('Verification code sent. Please check your email.');
       
       // 开始倒计时（60秒）
       setCountdown(60);
@@ -54,7 +54,7 @@ function LoginPage() {
     try {
       setLoading(true);
       await loginByEmailCode(values.email, values.code);
-      message.success('登录成功');
+      message.success('Login successful');
       
       // 根据用户角色跳转到不同页面
       const user = getLocalUser();
@@ -77,7 +77,7 @@ function LoginPage() {
     try {
       setLoading(true);
       await loginByPassword(values.email, values.password);
-      message.success('登录成功');
+      message.success('Login successful');
       
       // 根据用户角色跳转到不同页面
       const user = getLocalUser();
@@ -96,7 +96,7 @@ function LoginPage() {
   return (
     <div className="page-container">
       <div className="card-container">
-        <h1 className="page-title">评分系统</h1>
+        <h1 className="page-title">Rating System</h1>
         
         <Tabs
           defaultActiveKey="code"
@@ -104,7 +104,7 @@ function LoginPage() {
           items={[
             {
               key: 'code',
-              label: '验证码登录',
+              label: 'Verification Code',
               children: (
                 // 邮箱验证码登录表单
                 <Form
@@ -116,13 +116,13 @@ function LoginPage() {
                   <Form.Item
                     name="email"
                     rules={[
-                      { required: true, message: '请输入邮箱地址' },
-                      { type: 'email', message: '请输入有效的邮箱地址' }
+                      { required: true, message: 'Please enter email address' },
+                      { type: 'email', message: 'Please enter a valid email address' }
                     ]}
                   >
                     <Input 
                       prefix={<MailOutlined />} 
-                      placeholder="邮箱地址" 
+                      placeholder="Email address" 
                     />
                   </Form.Item>
 
@@ -130,24 +130,24 @@ function LoginPage() {
                     <Form.Item
                       name="code"
                       noStyle
-                      rules={[{ required: true, message: '请输入验证码' }]}
+                      rules={[{ required: true, message: 'Please enter verification code' }]}
                     >
                       <Input
                         prefix={<SafetyCertificateOutlined />}
-                        placeholder="验证码"
+                        placeholder="Verification code"
                         style={{ width: 'calc(100% - 120px)' }}
                       />
                     </Form.Item>
                     <Button
                       style={{ width: '110px', marginLeft: '10px' }}
                       onClick={() => {
-                        const form = document.querySelector('input[placeholder="邮箱地址"]');
+                        const form = document.querySelector('input[placeholder="Email address"]');
                         handleSendCode(form?.value);
                       }}
                       loading={sendingCode}
                       disabled={countdown > 0}
                     >
-                      {countdown > 0 ? `${countdown}秒后重发` : '发送验证码'}
+                      {countdown > 0 ? `Resend in ${countdown}s` : 'Send Code'}
                     </Button>
                   </Form.Item>
 
@@ -158,7 +158,7 @@ function LoginPage() {
                       className="full-width-button"
                       loading={loading}
                     >
-                      登录
+                      Log in
                     </Button>
                   </Form.Item>
                 </Form>
@@ -166,9 +166,8 @@ function LoginPage() {
             },
             {
               key: 'password',
-              label: '密码登录',
+              label: 'Password',
               children: (
-                // 账号密码登录表单
                 <Form
                   name="passwordLogin"
                   onFinish={handlePasswordLogin}
@@ -178,23 +177,23 @@ function LoginPage() {
                   <Form.Item
                     name="email"
                     rules={[
-                      { required: true, message: '请输入邮箱地址' },
-                      { type: 'email', message: '请输入有效的邮箱地址' }
+                      { required: true, message: 'Please enter email address' },
+                      { type: 'email', message: 'Please enter a valid email address' }
                     ]}
                   >
                     <Input 
                       prefix={<MailOutlined />} 
-                      placeholder="邮箱地址" 
+                      placeholder="Email address" 
                     />
                   </Form.Item>
 
                   <Form.Item
                     name="password"
-                    rules={[{ required: true, message: '请输入密码' }]}
+                    rules={[{ required: true, message: 'Please enter password' }]}
                   >
                     <Input.Password
                       prefix={<LockOutlined />}
-                      placeholder="密码"
+                      placeholder="Password"
                     />
                   </Form.Item>
 
@@ -205,7 +204,7 @@ function LoginPage() {
                       className="full-width-button"
                       loading={loading}
                     >
-                      登录
+                      Log in
                     </Button>
                   </Form.Item>
                 </Form>
