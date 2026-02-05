@@ -149,7 +149,7 @@ function AdminDashboard() {
    */
   const handleLogout = () => {
     logout();
-    message.success('已退出登录');
+    message.success('Logged out successfully');
     navigate('/login');
   };
 
@@ -158,58 +158,58 @@ function AdminDashboard() {
    */
   const handleViewDetail = (record) => {
     Modal.info({
-      title: `订单 ${record.order_no} 的评价详情`,
+      title: `Order ${record.order_no} - Rating Details`,
       width: 600,
       content: (
         <div style={{ marginTop: 20 }}>
           <Space direction="vertical" style={{ width: '100%' }} size="middle">
             <div>
-              <Text strong>用户：</Text>
+              <Text strong>User: </Text>
               <Text>{record.username} ({record.user_email})</Text>
             </div>
             <div>
-              <Text strong>管理员：</Text>
-              <Text>{record.admin_name || '未指定'}</Text>
+              <Text strong>Admin: </Text>
+              <Text>{record.admin_name || 'Not specified'}</Text>
             </div>
             <div>
-              <Text strong>总体评分：</Text>
+              <Text strong>Overall Rating: </Text>
               <Rate disabled value={record.overall_score} />
-              <Text>({record.overall_score}星)</Text>
+              <Text> ({record.overall_score} star)</Text>
             </div>
             {record.service_attitude && (
               <div>
-                <Text strong>服务态度：</Text>
+                <Text strong>Service Attitude: </Text>
                 <Rate disabled value={record.service_attitude} />
               </div>
             )}
             {record.response_speed && (
               <div>
-                <Text strong>响应速度：</Text>
+                <Text strong>Response Speed: </Text>
                 <Rate disabled value={record.response_speed} />
               </div>
             )}
             {record.problem_solving && (
               <div>
-                <Text strong>问题解决：</Text>
+                <Text strong>Problem-solving: </Text>
                 <Rate disabled value={record.problem_solving} />
               </div>
             )}
             {record.professionalism && (
               <div>
-                <Text strong>专业程度：</Text>
+                <Text strong>Professionalism: </Text>
                 <Rate disabled value={record.professionalism} />
               </div>
             )}
             {record.comment && (
               <div>
-                <Text strong>评价内容：</Text>
+                <Text strong>Comment: </Text>
                 <div style={{ marginTop: 8, padding: 12, background: '#f5f5f5', borderRadius: 4 }}>
                   {record.comment}
                 </div>
               </div>
             )}
             <div>
-              <Text strong>评价时间：</Text>
+              <Text strong>Rated at: </Text>
               <Text>{dayjs(record.created_at).format('YYYY-MM-DD HH:mm:ss')}</Text>
             </div>
           </Space>
@@ -221,14 +221,14 @@ function AdminDashboard() {
   // 表格列定义
   const columns = [
     {
-      title: '订单号',
+      title: 'Order No.',
       dataIndex: 'order_no',
       key: 'order_no',
       width: 150,
       fixed: 'left'
     },
     {
-      title: '用户',
+      title: 'User',
       dataIndex: 'username',
       key: 'username',
       width: 120,
@@ -240,21 +240,21 @@ function AdminDashboard() {
       )
     },
     {
-      title: '管理员',
+      title: 'Admin',
       dataIndex: 'admin_name',
       key: 'admin_name',
       width: 100,
       render: (text) => text || '-'
     },
     {
-      title: '总体评分',
+      title: 'Overall',
       dataIndex: 'overall_score',
       key: 'overall_score',
       width: 150,
       render: (score) => <Rate disabled value={score} />
     },
     {
-      title: '评价内容',
+      title: 'Comment',
       dataIndex: 'comment',
       key: 'comment',
       width: 200,
@@ -262,24 +262,24 @@ function AdminDashboard() {
       render: (text) => text ? (
         <Text ellipsis={{ tooltip: text }}>{text}</Text>
       ) : (
-        <Text type="secondary">无评语</Text>
+        <Text type="secondary">No comment</Text>
       )
     },
     {
-      title: '评价时间',
+      title: 'Rated at',
       dataIndex: 'created_at',
       key: 'created_at',
       width: 180,
       render: (date) => dayjs(date).format('YYYY-MM-DD HH:mm:ss')
     },
     {
-      title: '操作',
+      title: 'Action',
       key: 'action',
       width: 120,
       fixed: 'right',
       render: (_, record) => (
         <Button type="link" onClick={() => handleViewDetail(record)}>
-          查看详情
+          View Details
         </Button>
       )
     }
@@ -297,12 +297,12 @@ function AdminDashboard() {
         boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
       }}>
         <Title level={3} style={{ margin: 0, color: '#1890ff' }}>
-          <DashboardOutlined /> 管理员后台
+          <DashboardOutlined /> Admin Dashboard
         </Title>
         <Space>
-          <Text>管理员：{user?.username || user?.email}</Text>
+          <Text>Admin: {user?.username || user?.email}</Text>
           <Button icon={<LogoutOutlined />} onClick={handleLogout}>
-            退出登录
+            Logout
           </Button>
         </Space>
       </Header>
@@ -314,7 +314,7 @@ function AdminDashboard() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="评价总数"
+                title="Total Ratings"
                 value={statistics.total_ratings || 0}
                 prefix={<StarOutlined />}
               />
@@ -323,7 +323,7 @@ function AdminDashboard() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="平均评分"
+                title="Average Rating"
                 value={statistics.avg_overall_score || 0}
                 precision={2}
                 suffix="/ 5"
@@ -334,7 +334,7 @@ function AdminDashboard() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="五星好评"
+                title="5-Star Count"
                 value={statistics.five_star_count || 0}
                 valueStyle={{ color: '#52c41a' }}
               />
@@ -343,7 +343,7 @@ function AdminDashboard() {
           <Col span={6}>
             <Card>
               <Statistic
-                title="有评语"
+                title="With Comment"
                 value={statistics.with_comment_count || 0}
                 suffix={`/ ${statistics.total_ratings || 0}`}
               />
@@ -355,7 +355,7 @@ function AdminDashboard() {
         <Card style={{ marginBottom: 24 }}>
           <Space wrap>
             <RangePicker
-              placeholder={['开始日期', '结束日期']}
+              placeholder={['Start date', 'End date']}
               onChange={(dates) => {
                 setFilters({
                   ...filters,
@@ -366,26 +366,26 @@ function AdminDashboard() {
             />
             
             <Select
-              placeholder="评分筛选"
+              placeholder="Score filter"
               style={{ width: 150 }}
               allowClear
               onChange={(value) => setFilters({ ...filters, minScore: value })}
             >
-              <Select.Option value={5}>5星</Select.Option>
-              <Select.Option value={4}>4星及以上</Select.Option>
-              <Select.Option value={3}>3星及以上</Select.Option>
-              <Select.Option value={2}>2星及以上</Select.Option>
-              <Select.Option value={1}>1星及以上</Select.Option>
+              <Select.Option value={5}>5 stars</Select.Option>
+              <Select.Option value={4}>4+ stars</Select.Option>
+              <Select.Option value={3}>3+ stars</Select.Option>
+              <Select.Option value={2}>2+ stars</Select.Option>
+              <Select.Option value={1}>1+ stars</Select.Option>
             </Select>
 
             <Select
-              placeholder="评语筛选"
+              placeholder="Comment filter"
               style={{ width: 150 }}
               allowClear
               onChange={(value) => setFilters({ ...filters, hasComment: value })}
             >
-              <Select.Option value={1}>有评语</Select.Option>
-              <Select.Option value={0}>无评语</Select.Option>
+              <Select.Option value={1}>With comment</Select.Option>
+              <Select.Option value={0}>No comment</Select.Option>
             </Select>
 
             <Button
@@ -393,14 +393,14 @@ function AdminDashboard() {
               icon={<SearchOutlined />}
               onClick={handleApplyFilters}
             >
-              应用筛选
+              Apply
             </Button>
             
             <Button
               icon={<ReloadOutlined />}
               onClick={handleResetFilters}
             >
-              重置
+              Reset
             </Button>
           </Space>
         </Card>
