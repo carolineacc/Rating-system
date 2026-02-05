@@ -30,12 +30,14 @@ class Rating {
       userAgent
     } = ratingData;
 
+    // PostgreSQL 使用 RETURNING 获取插入的 id（MySQL 用 result.insertId）
     const sql = `
       INSERT INTO ratings (
         order_id, order_no, user_id, admin_id,
         overall_score, service_attitude, response_speed, problem_solving, professionalism,
         comment, tags, is_anonymous, images, ip_address, user_agent
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      RETURNING id
     `;
 
     const result = await query(sql, [
@@ -56,8 +58,9 @@ class Rating {
       userAgent
     ]);
 
+    const id = result && result[0] ? result[0].id : null;
     return {
-      id: result.insertId,
+      id,
       ...ratingData
     };
   }
@@ -83,7 +86,9 @@ class Rating {
   static async hasRatedByOrderNo(orderNo, userId) {
     const sql = 'SELECT COUNT(*) as count FROM ratings WHERE order_no = ? AND user_id = ?';
     const result = await query(sql, [orderNo, userId]);
-    return result[0].count > 0;
+    const row = result && result[0];
+    const count = row ? (typeof row.count === 'string' ? parseInt(row.count, 10) : row.count) : 0;
+    return count > 0;
   }
 
   /**
@@ -107,11 +112,11 @@ class Rating {
 
       const list = await query(listSql, []);
 
-      // 处理JSON字段
+      // 处理JSON字段（PostgreSQL JSONB 可能已是对象，MySQL 是字符串）
       const processedList = list.map(item => ({
         ...item,
-        tags: item.tags ? JSON.parse(item.tags) : null,
-        images: item.images ? JSON.parse(item.images) : null
+        tags: item.tags != null ? (typeof item.tags === 'string' ? JSON.parse(item.tags) : item.tags) : null,
+        images: item.images != null ? (typeof item.images === 'string' ? JSON.parse(item.images) : item.images) : null
       }));
 
       return {
@@ -151,8 +156,8 @@ class Rating {
     const rating = ratings[0];
     return {
       ...rating,
-      tags: rating.tags ? JSON.parse(rating.tags) : null,
-      images: rating.images ? JSON.parse(rating.images) : null
+      tags: rating.tags != null ? (typeof rating.tags === 'string' ? JSON.parse(rating.tags) : rating.tags) : null,
+      images: rating.images != null ? (typeof rating.images === 'string' ? JSON.parse(rating.images) : rating.images) : null
     };
   }
 
@@ -214,9 +219,11 @@ class Rating {
    * @returns {Object} - 回复信息
    */
   static async addReply(ratingId, adminId, replyContent) {
+    // PostgreSQL 用 RETURNING 获取插入的 id
     const sql = `
       INSERT INTO rating_replies (rating_id, admin_id, reply_content) 
       VALUES (?, ?, ?)
+      RETURNING id
     `;
 
     const result = await query(sql, [ratingId, adminId, replyContent]);
@@ -224,8 +231,9 @@ class Rating {
     // 更新评分表的回复状态
     await query('UPDATE ratings SET is_replied = 1 WHERE id = ?', [ratingId]);
 
+    const id = result && result[0] ? result[0].id : null;
     return {
-      id: result.insertId,
+      id,
       ratingId,
       adminId,
       replyContent
