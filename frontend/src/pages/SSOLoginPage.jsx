@@ -34,7 +34,7 @@ function SSOLoginPage() {
       // 2. 验证参数
       if (!email || !timestamp || !sign) {
         setStatus('error');
-        setErrorMessage('跳转参数不完整，请从网站重新跳转');
+        setErrorMessage('Incomplete redirect parameters. Please try again from the website.');
         return;
       }
 
@@ -62,13 +62,13 @@ function SSOLoginPage() {
         }, 1000);
       } else {
         setStatus('error');
-        setErrorMessage(response.message || '自动登录失败');
+        setErrorMessage(response.message || 'Auto login failed');
       }
 
     } catch (error) {
       console.error('自动登录错误:', error);
       setStatus('error');
-      setErrorMessage(error.response?.data?.message || '自动登录失败，请重试');
+      setErrorMessage(error.response?.data?.message || 'Auto login failed. Please try again.');
     }
   };
 
@@ -94,7 +94,7 @@ function SSOLoginPage() {
             size="large"
           />
           <div style={{ marginTop: 24, fontSize: 16, color: '#666' }}>
-            正在验证身份，请稍候...
+            Verifying your identity, please wait...
           </div>
         </div>
       )}
@@ -102,19 +102,19 @@ function SSOLoginPage() {
       {status === 'success' && (
         <Result
           status="success"
-          title="验证成功！"
-          subTitle="正在跳转到评分页面..."
+          title="Verification successful!"
+          subTitle="Redirecting to rating page..."
         />
       )}
 
       {status === 'error' && (
         <Result
           status="error"
-          title="验证失败"
+          title="Verification failed"
           subTitle={errorMessage}
           extra={
             <Button type="primary" onClick={goToLogin}>
-              返回登录页
+              Back to Login
             </Button>
           }
         />
