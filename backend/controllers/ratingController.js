@@ -125,8 +125,8 @@ async function createRating(req, res) {
   } catch (error) {
     console.error('创建评分错误:', error);
     
-    // 处理唯一键冲突（重复评分）
-    if (error.code === 'ER_DUP_ENTRY') {
+    // 处理唯一键冲突（重复评分）- MySQL: ER_DUP_ENTRY, PostgreSQL: 23505
+    if (error.code === 'ER_DUP_ENTRY' || error.code === '23505') {
       return res.status(400).json({
         success: false,
         message: '该订单已评分，请勿重复提交'
