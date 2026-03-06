@@ -94,17 +94,17 @@ async function createRating(req, res) {
       });
     }
 
-    // 5. 创建评分记录
+       // 5. 创建评分记录（将小数评分四舍五入为整数，兼容数据库 SMALLINT 类型）
     const ratingData = {
       orderId: orderId || null,
       orderNo,
       userId: req.user.id,
       adminId: adminId || null,
-      overallScore,
-      serviceAttitude,
-      responseSpeed,
-      problemSolving,
-      professionalism,
+      overallScore: Math.round(Number(overallScore)),
+      serviceAttitude: serviceAttitude != null ? Math.round(Number(serviceAttitude)) : null,
+      responseSpeed: responseSpeed != null ? Math.round(Number(responseSpeed)) : null,
+      problemSolving: problemSolving != null ? Math.round(Number(problemSolving)) : null,
+      professionalism: professionalism != null ? Math.round(Number(professionalism)) : null,
       comment,
       tags,
       isAnonymous: isAnonymous || 0,
@@ -112,7 +112,6 @@ async function createRating(req, res) {
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     };
-
     const rating = await Rating.create(ratingData);
 
     // 6. 返回成功响应
@@ -431,3 +430,4 @@ module.exports = {
   getReplies,
   checkRated
 };
+
