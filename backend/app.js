@@ -24,6 +24,7 @@ const authRoutes = require('./routes/auth');
 const ratingRoutes = require('./routes/rating');
 const ssoRoutes = require('./routes/sso');
 const orderRoutes = require('./routes/order');
+const adminRoutes = require('./routes/admin');
 
 
 // ==================== 创建Express应用 ====================
@@ -89,6 +90,9 @@ app.use('/api/sso', ssoRoutes);
 
 // 订单查询路由（通过外部API获取真实订单数据）
 app.use('/api/orders', orderRoutes);
+
+// 管理员接口（用于后台筛选等）
+app.use('/api/admins', adminRoutes);
 
 // 404错误处理（未找到的路由）
 app.use((req, res) => {
