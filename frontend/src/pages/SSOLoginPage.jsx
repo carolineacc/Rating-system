@@ -48,15 +48,18 @@ function SSOLoginPage() {
         setItem(STORAGE_KEYS.TOKEN, response.data.token);
         setItem(STORAGE_KEYS.USER, response.data.user);
 
+        // 5. 如果后端返回了订单详情，缓存到 sessionStorage 供 RatingPage 使用
+        if (response.data.orderInfo) {
+          sessionStorage.setItem('sso_order_info', JSON.stringify(response.data.orderInfo));
+        }
+
         setStatus('success');
 
-        // 5. 跳转到评分页面
+        // 6. 跳转到评分页面
         setTimeout(() => {
           if (response.data.orderNo) {
-            // 如果有订单号，跳转到评分页面并自动填入订单号
             navigate(`/rating?orderNo=${response.data.orderNo}`);
           } else {
-            // 没有订单号，跳转到评分页面首页
             navigate('/rating');
           }
         }, 1000);
