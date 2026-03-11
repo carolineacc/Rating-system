@@ -1,32 +1,16 @@
 /**
  * SSO单点登录控制器
- * 处理从现有网站的免登录跳转
+ * 处理从现有网站的免登录跳转，并同步外部 API 的用户和订单数据
  */
 
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { verifySign, verifyTimestamp } = require('../utils/signature');
+const { getUserByEmail, getOrderByNo, formatOrderStatus } = require('../services/externalApiService');
 
 /**
  * 免登录跳转验证
  * GET /api/sso/auto-login?email=xxx&orderNo=xxx&timestamp=xxx&sign=xxx
- * 
- * 请求参数:
- * - email: 用户邮箱（必填）
- * - orderNo: 订单号（可选）
- * - timestamp: 时间戳（必填）
- * - sign: 签名（必填）
- * 
- * 响应:
- * {
- *   "success": true,
- *   "message": "验证成功",
- *   "data": {
- *     "token": "eyJhbGc...",
- *     "user": { ... },
- *     "orderNo": "ORD123"
- *   }
- * }
  */
 async function autoLogin(req, res) {
   try {
@@ -49,7 +33,8 @@ async function autoLogin(req, res) {
     }
 
     // 3. 验证签名（确保请求来自合法来源）
-    const params = { email, orderNo, timestamp };
+    const params = { email, timestamp };
+    if (orderNo) params.orderNo = orderNo;
     if (!verifySign({ ...params, sign })) {
       return res.status(401).json({
         success: false,
@@ -57,27 +42,72 @@ async function autoLogin(req, res) {
       });
     }
 
-    // 4. 查找或创建用户
+    // 4. 从外部 API 获取用户信息（异步，不阻塞主流程）
+    let externalUser = null;
+    try {
+      externalUser = await getUserByEmail(email);
+      if (externalUser) {
+        console.log(`✅ 外部API获取用户信息成功: ${email} (${externalUser.NickName})`);
+      }
+    } catch (e) {
+      console.warn('外部API获取用户信息失败（不影响登录）:', e.message);
+    }
+
+    // 5. 查找或创建本地用户，并同步外部信息
     let user = await User.findByEmail(email);
 
     if (!user) {
-      // 用户不存在，自动创建
-      user = await User.create({
-        email,
-        username: email.split('@')[0],
-        role: 'user'
-      });
-      console.log(`✅ 自动创建用户: ${email}`);
+      // 新用户：用外部 API 的昵称作为用户名
+      const username = externalUser?.NickName || email.split('@')[0];
+      user = await User.create({ email, username, role: 'user' });
+      console.log(`✅ 自动创建用户: ${email} (${username})`);
+    } else if (externalUser?.NickName && user.username !== externalUser.NickName) {
+      // 已有用户：同步最新昵称
+      await User.updateUsername(user.id, externalUser.NickName);
+      user.username = externalUser.NickName;
     }
 
-    // 5. 生成评分系统的 JWT Token
+    // 6. 从外部 API 获取订单信息
+    let orderInfo = null;
+    if (orderNo) {
+      try {
+        const orderData = await getOrderByNo(orderNo);
+        if (orderData) {
+          const o = orderData.orders;
+          const products = orderData.orders_products_list || [];
+          orderInfo = {
+            orderNo: o.OId,
+            status: formatOrderStatus(o.OrderStatus, o.IsPresale === '1'),
+            statusCode: o.OrderStatus,
+            isPresale: o.IsPresale === '1',
+            totalPrice: o.OrderTotalPrice,
+            currency: o.Currency,
+            paymentMethod: o.PaymentMethod,
+            orderTime: o.OrderTime,
+            products: products.map(p => ({
+              name: p.Name,
+              sku: p.SKU,
+              qty: p.Qty,
+              price: p.Price,
+              image: p.PicPath,
+              url: p.ProductsUrl
+            }))
+          };
+          console.log(`✅ 外部API获取订单信息成功: ${orderNo}`);
+        }
+      } catch (e) {
+        console.warn('外部API获取订单信息失败（不影响登录）:', e.message);
+      }
+    }
+
+    // 7. 生成 JWT Token
     const token = generateToken({
       id: user.id,
       email: user.email,
       role: user.role
     });
 
-    // 6. 记录登录日志
+    // 8. 记录登录日志
     await User.logLogin({
       userId: user.id,
       email: user.email,
@@ -89,7 +119,7 @@ async function autoLogin(req, res) {
 
     console.log(`✅ 免登录跳转成功: ${email} → 订单: ${orderNo || '未指定'}`);
 
-    // 7. 返回成功响应
+    // 9. 返回成功响应
     return res.json({
       success: true,
       message: '验证成功',
@@ -101,7 +131,8 @@ async function autoLogin(req, res) {
           username: user.username,
           role: user.role
         },
-        orderNo: orderNo || null
+        orderNo: orderNo || null,
+        orderInfo  // 订单详情（可能为 null）
       }
     });
 
@@ -114,6 +145,4 @@ async function autoLogin(req, res) {
   }
 }
 
-module.exports = {
-  autoLogin
-};
+module.exports = { autoLogin };
