@@ -98,7 +98,75 @@ class Rating {
    */
   static async getList(filters = {}) {
     try {
-      // 简化版：直接查询所有数据，前端分页
+      const {
+        adminId,
+        userId,
+        minScore,
+        maxScore,
+        startDate,
+        endDate,
+        hasComment,
+        page = 1,
+        pageSize = 20,
+        orderBy = 'created_at',
+        orderDir = 'DESC'
+      } = filters;
+
+      const conditions = [];
+      const params = [];
+
+      if (adminId) {
+        conditions.push('r.admin_id = ?');
+        params.push(adminId);
+      }
+      if (userId) {
+        conditions.push('r.user_id = ?');
+        params.push(userId);
+      }
+      if (minScore) {
+        conditions.push('r.overall_score >= ?');
+        params.push(minScore);
+      }
+      if (maxScore) {
+        conditions.push('r.overall_score <= ?');
+        params.push(maxScore);
+      }
+      if (startDate) {
+        conditions.push('r.created_at >= ?');
+        params.push(startDate);
+      }
+      if (endDate) {
+        conditions.push('r.created_at <= ?');
+        params.push(endDate);
+      }
+      if (hasComment === 1) {
+        conditions.push(\"r.comment IS NOT NULL AND r.comment != ''\");
+      } else if (hasComment === 0) {
+        conditions.push(\"(r.comment IS NULL OR r.comment = '')\");
+      }
+
+      const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+      // 统计总数
+      const countSql = `
+        SELECT COUNT(*) as count
+        FROM ratings r
+        ${whereClause}
+      `;
+      const countRows = await query(countSql, params);
+      const countRow = countRows && countRows[0] ? countRows[0] : { count: 0 };
+      const total = typeof countRow.count === 'string' ? parseInt(countRow.count, 10) : (countRow.count || 0);
+
+      // 排序字段白名单
+      const orderByAllowed = new Set(['created_at', 'overall_score', 'order_no']);
+      const safeOrderBy = orderByAllowed.has(orderBy) ? orderBy : 'created_at';
+      const safeOrderDir = String(orderDir).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+
+      const limit = Math.max(1, parseInt(pageSize, 10) || 20);
+      const currentPage = Math.max(1, parseInt(page, 10) || 1);
+      const offset = (currentPage - 1) * limit;
+
+      // 列表查询（后端分页）
       const listSql = `
         SELECT 
           r.*,
@@ -107,10 +175,13 @@ class Rating {
         FROM ratings r
         LEFT JOIN users u ON r.user_id = u.id
         LEFT JOIN admins a ON r.admin_id = a.id
-        ORDER BY r.created_at DESC
+        ${whereClause}
+        ORDER BY r.${safeOrderBy} ${safeOrderDir}
+        LIMIT ?
+        OFFSET ?
       `;
 
-      const list = await query(listSql, []);
+      const list = await query(listSql, [...params, limit, offset]);
 
       // 处理JSON字段（PostgreSQL JSONB 可能已是对象，MySQL 是字符串）
       const processedList = list.map(item => ({
@@ -121,10 +192,10 @@ class Rating {
 
       return {
         list: processedList,
-        total: processedList.length,
-        page: 1,
-        pageSize: processedList.length,
-        totalPages: 1
+        total,
+        page: currentPage,
+        pageSize: limit,
+        totalPages: Math.max(1, Math.ceil(total / limit))
       };
     } catch (error) {
       console.error('获取评分列表错误:', error);
