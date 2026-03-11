@@ -140,9 +140,9 @@ class Rating {
         params.push(endDate);
       }
       if (hasComment === 1) {
-        conditions.push(\"r.comment IS NOT NULL AND r.comment != ''\");
+        conditions.push("r.comment IS NOT NULL AND r.comment != ''");
       } else if (hasComment === 0) {
-        conditions.push(\"(r.comment IS NULL OR r.comment = '')\");
+        conditions.push("(r.comment IS NULL OR r.comment = '')");
       }
 
       const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
