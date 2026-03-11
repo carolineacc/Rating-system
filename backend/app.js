@@ -23,6 +23,7 @@ const config = require('./config/config');
 const authRoutes = require('./routes/auth');
 const ratingRoutes = require('./routes/rating');
 const ssoRoutes = require('./routes/sso');
+const orderRoutes = require('./routes/order');
 
 
 // ==================== 创建Express应用 ====================
@@ -36,7 +37,11 @@ app.use(helmet()); // 设置HTTP安全头
 
 // 2. CORS跨域配置（允许前端访问后端API）
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'https://rating-system-frontend.onrender.com'], // 允许的前端地址
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:5174',
+    'https://rating-system-frontend.onrender.com' // 生产环境前端地址
+  ],
   credentials: true // 允许携带Cookie
 }));
 
@@ -81,6 +86,9 @@ app.use('/api/ratings', ratingRoutes);
 
 // SSO免登录跳转路由
 app.use('/api/sso', ssoRoutes);
+
+// 订单查询路由（通过外部API获取真实订单数据）
+app.use('/api/orders', orderRoutes);
 
 // 404错误处理（未找到的路由）
 app.use((req, res) => {
@@ -161,4 +169,3 @@ startServer();
 
 // 导出app供测试使用
 module.exports = app;
-
