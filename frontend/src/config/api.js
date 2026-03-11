@@ -17,6 +17,11 @@ export const API_ENDPOINTS = {
     ME: '/api/auth/me',                         // 获取当前用户信息
   },
   
+  // 订单相关
+  ORDERS: {
+    DETAIL: (orderNo) => `/api/orders/${orderNo}`,  // 获取订单详情
+  },
+
   // 评分相关
   RATINGS: {
     CREATE: '/api/ratings',                     // 创建评分
