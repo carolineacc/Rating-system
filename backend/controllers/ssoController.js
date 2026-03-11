@@ -6,7 +6,11 @@
 const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { verifySign, verifyTimestamp } = require('../utils/signature');
-const { getUserByEmail, getOrderByNo, formatOrderStatus } = require('../services/externalApiService');
+const { getUserByEmail, getOrderByNo } = require('../services/externalApiService');
+
+function isShowzAdminEmail(email) {
+  return typeof email === 'string' && email.toLowerCase().endsWith('@showz.store');
+}
 
 /**
  * 免登录跳转验证
@@ -14,7 +18,7 @@ const { getUserByEmail, getOrderByNo, formatOrderStatus } = require('../services
  */
 async function autoLogin(req, res) {
   try {
-    const { email, orderNo, timestamp, sign } = req.query;
+    const { email, orderNo, adminId, timestamp, sign } = req.query;
 
     // 1. 验证必填参数
     if (!email || !timestamp || !sign) {
@@ -35,6 +39,7 @@ async function autoLogin(req, res) {
     // 3. 验证签名（确保请求来自合法来源）
     const params = { email, timestamp };
     if (orderNo) params.orderNo = orderNo;
+    if (adminId) params.adminId = adminId;
     if (!verifySign({ ...params, sign })) {
       return res.status(401).json({
         success: false,
@@ -59,44 +64,26 @@ async function autoLogin(req, res) {
     if (!user) {
       // 新用户：用外部 API 的昵称作为用户名
       const username = externalUser?.NickName || email.split('@')[0];
-      user = await User.create({ email, username, role: 'user' });
+      user = await User.create({ email, username, role: isShowzAdminEmail(email) ? 'admin' : 'user' });
       console.log(`✅ 自动创建用户: ${email} (${username})`);
+    } else if (isShowzAdminEmail(email) && user.role !== 'admin') {
+      await User.updateRole(user.id, 'admin');
+      user.role = 'admin';
     } else if (externalUser?.NickName && user.username !== externalUser.NickName) {
       // 已有用户：同步最新昵称
       await User.updateUsername(user.id, externalUser.NickName);
       user.username = externalUser.NickName;
     }
 
-    // 6. 从外部 API 获取订单信息
-    let orderInfo = null;
+    // 6. （可选）快速校验订单号是否存在（不返回详情、不阻塞登录）
     if (orderNo) {
       try {
         const orderData = await getOrderByNo(orderNo);
-        if (orderData) {
-          const o = orderData.orders;
-          const products = orderData.orders_products_list || [];
-          orderInfo = {
-            orderNo: o.OId,
-            status: formatOrderStatus(o.OrderStatus, o.IsPresale === '1'),
-            statusCode: o.OrderStatus,
-            isPresale: o.IsPresale === '1',
-            totalPrice: o.OrderTotalPrice,
-            currency: o.Currency,
-            paymentMethod: o.PaymentMethod,
-            orderTime: o.OrderTime,
-            products: products.map(p => ({
-              name: p.Name,
-              sku: p.SKU,
-              qty: p.Qty,
-              price: p.Price,
-              image: p.PicPath,
-              url: p.ProductsUrl
-            }))
-          };
-          console.log(`✅ 外部API获取订单信息成功: ${orderNo}`);
+        if (orderData?.orders?.OId) {
+          console.log(`✅ 外部API校验订单号存在: ${orderNo}`);
         }
       } catch (e) {
-        console.warn('外部API获取订单信息失败（不影响登录）:', e.message);
+        console.warn('外部API订单号校验失败（不影响登录）:', e.message);
       }
     }
 
@@ -132,7 +119,7 @@ async function autoLogin(req, res) {
           role: user.role
         },
         orderNo: orderNo || null,
-        orderInfo  // 订单详情（可能为 null）
+        adminId: adminId ? Number(adminId) : null
       }
     });
 

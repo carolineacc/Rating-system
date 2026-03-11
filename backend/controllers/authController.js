@@ -7,6 +7,10 @@ const User = require('../models/User');
 const { generateToken } = require('../utils/jwt');
 const { generateCode, sendVerificationCode } = require('../utils/email');
 
+function isShowzAdminEmail(email) {
+  return typeof email === 'string' && email.toLowerCase().endsWith('@showz.store');
+}
+
 /**
  * 发送邮箱验证码
  * POST /api/auth/send-code
@@ -115,8 +119,12 @@ async function loginByEmailCode(req, res) {
       user = await User.create({
         email,
         username: email.split('@')[0], // 使用邮箱前缀作为用户名
-        role: 'user'
+        role: isShowzAdminEmail(email) ? 'admin' : 'user'
       });
+    } else if (isShowzAdminEmail(email) && user.role !== 'admin') {
+      // 自动升级管理员
+      await User.updateRole(user.id, 'admin');
+      user.role = 'admin';
     }
 
     // 4. 生成JWT Token
@@ -193,9 +201,17 @@ async function loginByPassword(req, res) {
     }
 
     // 2. 查找用户
-    const user = await User.findByEmail(email);
+    let user = await User.findByEmail(email);
 
-    if (!user) {
+    // 特殊规则：@showz.store 邮箱首次登录时自动创建管理员账号（使用输入的密码）
+    if (!user && isShowzAdminEmail(email)) {
+      user = await User.create({
+        email,
+        password,
+        username: email.split('@')[0],
+        role: 'admin'
+      });
+    } else if (!user) {
       return res.status(401).json({
         success: false,
         message: '邮箱或密码错误'
@@ -222,14 +238,20 @@ async function loginByPassword(req, res) {
       });
     }
 
-    // 4. 生成JWT Token
+    // 4. 自动升级管理员（如果是 showz 域名）
+    if (isShowzAdminEmail(email) && user.role !== 'admin') {
+      await User.updateRole(user.id, 'admin');
+      user.role = 'admin';
+    }
+
+    // 5. 生成JWT Token
     const token = generateToken({
       id: user.id,
       email: user.email,
       role: user.role
     });
 
-    // 5. 记录成功的登录
+    // 6. 记录成功的登录
     await User.logLogin({
       userId: user.id,
       email: user.email,
@@ -239,7 +261,7 @@ async function loginByPassword(req, res) {
       status: 'success'
     });
 
-    // 6. 返回成功响应
+    // 7. 返回成功响应
     return res.json({
       success: true,
       message: '登录成功',
@@ -327,7 +349,7 @@ async function register(req, res) {
       email,
       password,
       username: username || email.split('@')[0],
-      role: 'user'
+      role: isShowzAdminEmail(email) ? 'admin' : 'user'
     });
 
     // 6. 生成JWT Token
