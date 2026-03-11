@@ -72,6 +72,17 @@ class User {
   }
 
   /**
+   * 更新角色（用于自动升级管理员）
+   * @param {Number} id - 用户ID
+   * @param {String} role - user/admin
+   */
+  static async updateRole(id, role) {
+    const sql = 'UPDATE users SET role = ? WHERE id = ?';
+    await query(sql, [role, id]);
+    return true;
+  }
+
+  /**
    * 验证密码
    * @param {String} plainPassword - 明文密码
    * @param {String} hashedPassword - 加密后的密码
