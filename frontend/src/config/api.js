@@ -17,6 +17,11 @@ export const API_ENDPOINTS = {
     ME: '/api/auth/me',                         // 获取当前用户信息
   },
   
+  // 管理员相关（后台）
+  ADMINS: {
+    LIST: '/api/admins', // 获取管理员列表
+  },
+
   // 订单相关
   ORDERS: {
     DETAIL: (orderNo) => `/api/orders/${orderNo}`,  // 获取订单详情
