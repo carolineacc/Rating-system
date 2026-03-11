@@ -46,16 +46,29 @@ class User {
     const sql = `
       INSERT INTO users (email, password_hash, username, role) 
       VALUES (?, ?, ?, ?)
+      RETURNING id
     `;
     
     const result = await query(sql, [email, passwordHash, username || email.split('@')[0], role]);
+    const id = result && result[0] ? result[0].id : null;
     
     return {
-      id: result.insertId,
+      id,
       email,
       username: username || email.split('@')[0],
       role
     };
+  }
+
+  /**
+   * 更新用户名（用于同步外部API昵称）
+   * @param {Number} id - 用户ID
+   * @param {String} username - 新用户名
+   */
+  static async updateUsername(id, username) {
+    const sql = 'UPDATE users SET username = ? WHERE id = ?';
+    await query(sql, [username, id]);
+    return true;
   }
 
   /**
