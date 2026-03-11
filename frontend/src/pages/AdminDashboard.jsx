@@ -33,6 +33,7 @@ import {
 } from '@ant-design/icons';
 import dayjs from 'dayjs';
 import { getRatingList, getStatistics } from '../services/ratingService';
+import { getAdminList } from '../services/adminService';
 import { getLocalUser, logout } from '../services/authService';
 
 const { Header, Content } = Layout;
@@ -48,6 +49,7 @@ function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [ratingList, setRatingList] = useState([]);
   const [statistics, setStatistics] = useState({});
+  const [admins, setAdmins] = useState([]);
   const [pagination, setPagination] = useState({
     current: 1,
     pageSize: 20,
@@ -56,6 +58,7 @@ function AdminDashboard() {
   
   // 筛选条件
   const [filters, setFilters] = useState({
+    adminId: undefined,
     minScore: undefined,
     maxScore: undefined,
     startDate: undefined,
@@ -94,6 +97,7 @@ function AdminDashboard() {
   const loadStatistics = async () => {
     try {
       const response = await getStatistics({
+        adminId: filters.adminId,
         startDate: filters.startDate,
         endDate: filters.endDate
       });
@@ -109,7 +113,21 @@ function AdminDashboard() {
   useEffect(() => {
     loadRatingList();
     loadStatistics();
+    loadAdmins();
   }, []);
+
+  /**
+   * 加载管理员列表（用于筛选）
+   */
+  const loadAdmins = async () => {
+    try {
+      const res = await getAdminList();
+      setAdmins(res.data || []);
+    } catch (e) {
+      // 不阻塞页面
+      setAdmins([]);
+    }
+  };
 
   /**
    * 处理表格变化（分页、筛选、排序）
@@ -131,6 +149,7 @@ function AdminDashboard() {
    */
   const handleResetFilters = () => {
     setFilters({
+      adminId: undefined,
       minScore: undefined,
       maxScore: undefined,
       startDate: undefined,
@@ -354,6 +373,18 @@ function AdminDashboard() {
         {/* 筛选区域 */}
         <Card style={{ marginBottom: 24 }}>
           <Space wrap>
+            <Select
+              placeholder="Admin filter"
+              style={{ width: 180 }}
+              allowClear
+              value={filters.adminId}
+              onChange={(value) => setFilters({ ...filters, adminId: value })}
+              options={admins.map(a => ({
+                value: a.id,
+                label: `${a.name}${a.email ? ` (${a.email})` : ''}`
+              }))}
+            />
+
             <RangePicker
               placeholder={['Start date', 'End date']}
               onChange={(dates) => {
