@@ -25,7 +25,7 @@ function SSOLoginPage() {
    */
   const handleAutoLogin = async () => {
     try {
-      // 1. 获取URL参数
+      // 1. 获取URL参数（adminId 不再由外部网站传入，由后端自动从外部API解析）
       const email = searchParams.get('email');
       const orderNo = searchParams.get('orderNo');
       const timestamp = searchParams.get('timestamp');
@@ -48,9 +48,12 @@ function SSOLoginPage() {
         setItem(STORAGE_KEYS.TOKEN, response.data.token);
         setItem(STORAGE_KEYS.USER, response.data.user);
 
-        // 5. 如果后端返回了订单详情，缓存到 sessionStorage 供 RatingPage 使用
-        if (response.data.orderInfo) {
-          sessionStorage.setItem('sso_order_info', JSON.stringify(response.data.orderInfo));
+        // 5. 缓存 SSO 传递的关键上下文（订单号 / 管理员ID）
+        if (response.data.orderNo || response.data.adminId) {
+          sessionStorage.setItem('sso_context', JSON.stringify({
+            orderNo: response.data.orderNo || null,
+            adminId: response.data.adminId || null
+          }));
         }
 
         setStatus('success');

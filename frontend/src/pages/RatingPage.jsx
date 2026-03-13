@@ -17,30 +17,16 @@ import {
   Typography,
   Divider,
   Tag,
-  Alert,
-  Spin,
-  Descriptions,
-  Image,
-  Badge
+  Alert
 } from 'antd';
-import { StarOutlined, LogoutOutlined, ShoppingOutlined, SearchOutlined } from '@ant-design/icons';
+import { StarOutlined, LogoutOutlined, SearchOutlined } from '@ant-design/icons';
 import { createRating, checkRated } from '../services/ratingService';
 import { getLocalUser, logout } from '../services/authService';
-import request from '../utils/request';
-import { API_ENDPOINTS } from '../config/api';
+ 
 
 const { Header, Content } = Layout;
 const { TextArea } = Input;
-const { Title, Text, Link } = Typography;
-
-// 订单状态对应的 Badge 颜色
-const STATUS_COLOR = {
-  'Received': 'success',
-  'Shipped': 'processing',
-  'All Payment Received': 'processing',
-  'Waiting for Payment': 'warning',
-  'Cancelled': 'error'
-};
+const { Title, Text } = Typography;
 
 function RatingPage() {
   const navigate = useNavigate();
@@ -50,30 +36,24 @@ function RatingPage() {
   const [hasRated, setHasRated] = useState(false);
   const [checkingRated, setCheckingRated] = useState(false);
 
-  // 订单详情状态
-  const [orderInfo, setOrderInfo] = useState(null);       // 从 SSO 传来的订单信息缓存
-  const [orderDetail, setOrderDetail] = useState(null);   // 从后端 API 拉取的完整订单
-  const [orderLoading, setOrderLoading] = useState(false);
-  const [orderError, setOrderError] = useState(null);
+  // SSO 上下文（订单号、管理员ID），用于把 adminId 一起提交到后端
+  const [ssoContext, setSsoContext] = useState(null);
 
   const orderNo = searchParams.get('orderNo');
   const user = getLocalUser();
 
   useEffect(() => {
-    // 尝试从 sessionStorage 读取 SSO 传来的订单信息
-    const cached = sessionStorage.getItem('sso_order_info');
+    // 尝试从 sessionStorage 读取 SSO 传来的上下文
+    const cached = sessionStorage.getItem('sso_context');
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.orderNo === orderNo) {
-          setOrderInfo(parsed);
-        }
+        setSsoContext(parsed);
       } catch (_) {}
     }
 
     if (orderNo) {
       checkOrderRated();
-      fetchOrderDetail(orderNo);
     }
   }, [orderNo]);
 
@@ -85,22 +65,6 @@ function RatingPage() {
     } catch (_) {
     } finally {
       setCheckingRated(false);
-    }
-  };
-
-  const fetchOrderDetail = async (no) => {
-    try {
-      setOrderLoading(true);
-      setOrderError(null);
-      const res = await request.get(API_ENDPOINTS.ORDERS.DETAIL(no));
-      if (res.success) {
-        setOrderDetail(res.data);
-      }
-    } catch (err) {
-      const msg = err.response?.data?.message || 'Failed to load order details.';
-      setOrderError(msg);
-    } finally {
-      setOrderLoading(false);
     }
   };
 
@@ -116,16 +80,11 @@ function RatingPage() {
       return;
     }
 
-    // 如果订单信息显示不允许评分（状态不符合），给出提示
-    if (orderDetail && !orderDetail.canRate) {
-      message.warning(`Order status is "${orderDetail.status}". Only paid or shipped orders can be rated.`);
-      return;
-    }
-
     try {
       setLoading(true);
       await createRating({
         orderNo: values.orderNo,
+        adminId: ssoContext?.adminId || null,
         overallScore: values.overallScore,
         serviceAttitude: values.serviceAttitude,
         responseSpeed: values.responseSpeed,
@@ -137,7 +96,7 @@ function RatingPage() {
 
       message.success('Rating submitted successfully. Thank you for your feedback!');
       form.resetFields();
-      sessionStorage.removeItem('sso_order_info');
+      sessionStorage.removeItem('sso_context');
 
       if (orderNo) checkOrderRated();
     } catch (_) {
@@ -151,93 +110,6 @@ function RatingPage() {
     const no = form.getFieldValue('orderNo');
     if (!no) { message.warning('Please enter order number first'); return; }
     checkRated(no).then(r => setHasRated(r.data.hasRated)).catch(() => {});
-    fetchOrderDetail(no);
-  };
-
-  // 渲染订单详情卡片
-  const renderOrderCard = () => {
-    if (!orderNo && !orderDetail) return null;
-
-    if (orderLoading) {
-      return (
-        <Card style={{ marginBottom: 16 }}>
-          <Spin tip="Loading order details..." />
-        </Card>
-      );
-    }
-
-    if (orderError) {
-      return (
-        <Alert
-          message="Order Not Found"
-          description={orderError}
-          type="warning"
-          showIcon
-          style={{ marginBottom: 16 }}
-        />
-      );
-    }
-
-    if (!orderDetail) return null;
-
-    const statusColor = STATUS_COLOR[orderDetail.status] || 'default';
-
-    return (
-      <Card
-        title={<Space><ShoppingOutlined /><span>Order Details</span></Space>}
-        style={{ marginBottom: 16 }}
-        extra={<Badge status={statusColor} text={orderDetail.status} />}
-      >
-        <Descriptions column={2} size="small">
-          <Descriptions.Item label="Order No.">{orderDetail.orderNo}</Descriptions.Item>
-          <Descriptions.Item label="Order Date">{orderDetail.orderTime || '—'}</Descriptions.Item>
-          <Descriptions.Item label="Payment">{orderDetail.paymentMethod || '—'}</Descriptions.Item>
-          <Descriptions.Item label="Total">
-            {orderDetail.currency} {orderDetail.totalPrice}
-          </Descriptions.Item>
-        </Descriptions>
-
-        {orderDetail.products?.length > 0 && (
-          <>
-            <Divider orientation="left" style={{ fontSize: 13 }}>Products</Divider>
-            {orderDetail.products.map((p, idx) => (
-              <div key={idx} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', marginBottom: 8 }}>
-                {p.image && (
-                  <Image
-                    src={p.image}
-                    width={60}
-                    height={60}
-                    style={{ objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
-                    fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
-                  />
-                )}
-                <div>
-                  {p.url ? (
-                    <Link href={p.url} target="_blank">{p.name}</Link>
-                  ) : (
-                    <Text>{p.name}</Text>
-                  )}
-                  <br />
-                  <Text type="secondary" style={{ fontSize: 12 }}>
-                    Qty: {p.qty} &nbsp;·&nbsp; {orderDetail.currency} {p.price}
-                    {p.sku && <> &nbsp;·&nbsp; SKU: {p.sku}</>}
-                  </Text>
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-
-        {!orderDetail.canRate && (
-          <Alert
-            message={`This order (${orderDetail.status}) is not eligible for rating yet.`}
-            type="info"
-            showIcon
-            style={{ marginTop: 8 }}
-          />
-        )}
-      </Card>
-    );
   };
 
   return (
@@ -265,9 +137,7 @@ function RatingPage() {
               style={{ marginBottom: 16 }}
             />
           )}
-
-          {/* 订单详情卡片 */}
-          {renderOrderCard()}
+          {/* 不展示订单详情，仅保留评分功能 */}
 
           {/* 评分表单 */}
           <Card>
