@@ -16,21 +16,21 @@ const API_NAME = 'openapi';
  * @returns {Object} - 接口返回的原始数据
  */
 async function callExternalApi(action, params = {}) {
-  const timestamp = String(Math.floor(Date.now() / 1000));
-
   const requestData = {
     ApiName: API_NAME,
     Number: API_NUMBER,
-    timestamp,
     Action: action,
     ...params
   };
+  // timestamp 需要参与签名计算，且外部文档示例为小写 timestamp
+  requestData.timestamp = String(Math.floor(Date.now() / 1000));
 
   // 生成签名（在 sign 字段加入前计算）
   const sign = generateSign(requestData);
   requestData.sign = sign;
 
   // 转为 URL 编码格式（网关要求 form 提交）
+  // 注意：外部接口字段存在大小写（如 Email/OrderNo），URLSearchParams 会按 key 原样发送
   const body = new URLSearchParams(requestData).toString();
 
   const response = await fetch(GATEWAY_URL, {
