@@ -5,6 +5,8 @@
 
 const Rating = require('../models/Rating');
 const config = require('../config/config');
+const Admin = require('../models/Admin');
+const { getOrderByNo, getUserByEmail } = require('../services/externalApiService');
 
 /**
  * 创建评分
@@ -86,7 +88,40 @@ async function createRating(req, res) {
       });
     }
 
-    // 4. 验证评论长度
+    // 3.1 外部系统校验：订单必须存在且属于当前登录邮箱
+    const externalOrder = await getOrderByNo(orderNo);
+    if (!externalOrder?.orders?.OId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Order not found. Please check the order number.'
+      });
+    }
+    const orderEmail = externalOrder.orders.Email;
+    if (orderEmail && orderEmail.toLowerCase() !== req.user.email.toLowerCase()) {
+      return res.status(403).json({
+        success: false,
+        message: 'This order does not belong to your account.'
+      });
+    }
+
+    // 4. 如果没有传 adminId，则尝试根据当前登录用户，从外部API自动解析对应管理员并写入本地 admins 表
+    let finalAdminId = adminId || null;
+    try {
+      if (!finalAdminId) {
+        const externalUser = await getUserByEmail(req.user.email);
+        if (externalUser && externalUser.ManageId && externalUser.ManageUserName) {
+          const admin = await Admin.upsertByExternalId(
+            externalUser.ManageId,
+            externalUser.ManageUserName
+          );
+          finalAdminId = admin ? admin.id : null;
+        }
+      }
+    } catch (e) {
+      console.warn('自动解析管理员失败（不影响评分提交）:', e.message);
+    }
+
+    // 5. 验证评论长度
     if (comment && comment.length > config.rating.maxCommentLength) {
       return res.status(400).json({
         success: false,
@@ -94,12 +129,12 @@ async function createRating(req, res) {
       });
     }
 
-       // 5. 创建评分记录（将小数评分四舍五入为整数，兼容数据库 SMALLINT 类型）
+    // 6. 创建评分记录（将小数评分四舍五入为整数，兼容数据库 SMALLINT 类型）
     const ratingData = {
       orderId: orderId || null,
       orderNo,
       userId: req.user.id,
-      adminId: adminId || null,
+      adminId: finalAdminId,
       overallScore: Math.round(Number(overallScore)),
       serviceAttitude: serviceAttitude != null ? Math.round(Number(serviceAttitude)) : null,
       responseSpeed: responseSpeed != null ? Math.round(Number(responseSpeed)) : null,
@@ -112,6 +147,7 @@ async function createRating(req, res) {
       ipAddress: req.ip,
       userAgent: req.get('user-agent')
     };
+
     const rating = await Rating.create(ratingData);
 
     // 6. 返回成功响应
@@ -430,4 +466,3 @@ module.exports = {
   getReplies,
   checkRated
 };
-

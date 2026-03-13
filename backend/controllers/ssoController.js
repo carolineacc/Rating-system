@@ -1,9 +1,10 @@
 /**
  * SSO单点登录控制器
- * 处理从现有网站的免登录跳转，并同步外部 API 的用户和订单数据
+ * 处理从现有网站的免登录跳转，并通过外部 API 自动同步用户和管理员数据
  */
 
 const User = require('../models/User');
+const Admin = require('../models/Admin');
 const { generateToken } = require('../utils/jwt');
 const { verifySign, verifyTimestamp } = require('../utils/signature');
 const { getUserByEmail, getOrderByNo } = require('../services/externalApiService');
@@ -15,10 +16,12 @@ function isShowzAdminEmail(email) {
 /**
  * 免登录跳转验证
  * GET /api/sso/auto-login?email=xxx&orderNo=xxx&timestamp=xxx&sign=xxx
+ * 
+ * 注意：adminId 不再由外部网站传入，由后端从外部 API 自动获取
  */
 async function autoLogin(req, res) {
   try {
-    const { email, orderNo, adminId, timestamp, sign } = req.query;
+    const { email, orderNo, timestamp, sign } = req.query;
 
     // 1. 验证必填参数
     if (!email || !timestamp || !sign) {
@@ -36,10 +39,9 @@ async function autoLogin(req, res) {
       });
     }
 
-    // 3. 验证签名（确保请求来自合法来源）
+    // 3. 验证签名（仅 email / orderNo / timestamp 参与签名，adminId 不再参与）
     const params = { email, timestamp };
     if (orderNo) params.orderNo = orderNo;
-    if (adminId) params.adminId = adminId;
     if (!verifySign({ ...params, sign })) {
       return res.status(401).json({
         success: false,
@@ -47,35 +49,50 @@ async function autoLogin(req, res) {
       });
     }
 
-    // 4. 从外部 API 获取用户信息（异步，不阻塞主流程）
+    // 4. 调用外部 API 获取用户信息（含 ManageId / ManageUserName）
     let externalUser = null;
+    let resolvedAdminId = null;
+
     try {
       externalUser = await getUserByEmail(email);
       if (externalUser) {
-        console.log(`✅ 外部API获取用户信息成功: ${email} (${externalUser.NickName})`);
+        console.log(`✅ 外部API获取用户信息成功: ${email} → 管理员: ${externalUser.ManageUserName}(${externalUser.ManageId})`);
+
+        // 5. 自动 upsert 管理员到本地 admins 表
+        if (externalUser.ManageId && externalUser.ManageUserName) {
+          const admin = await Admin.upsertByExternalId(
+            externalUser.ManageId,
+            externalUser.ManageUserName
+          );
+          resolvedAdminId = admin ? admin.id : null;
+        }
       }
     } catch (e) {
       console.warn('外部API获取用户信息失败（不影响登录）:', e.message);
     }
 
-    // 5. 查找或创建本地用户，并同步外部信息
+    // 6. 查找或创建本地用户，同步昵称和角色
     let user = await User.findByEmail(email);
+    const username = externalUser?.NickName || email.split('@')[0];
+    const role = isShowzAdminEmail(email) ? 'admin' : 'user';
 
     if (!user) {
-      // 新用户：用外部 API 的昵称作为用户名
-      const username = externalUser?.NickName || email.split('@')[0];
-      user = await User.create({ email, username, role: isShowzAdminEmail(email) ? 'admin' : 'user' });
+      user = await User.create({ email, username, role });
       console.log(`✅ 自动创建用户: ${email} (${username})`);
-    } else if (isShowzAdminEmail(email) && user.role !== 'admin') {
-      await User.updateRole(user.id, 'admin');
-      user.role = 'admin';
-    } else if (externalUser?.NickName && user.username !== externalUser.NickName) {
-      // 已有用户：同步最新昵称
-      await User.updateUsername(user.id, externalUser.NickName);
-      user.username = externalUser.NickName;
+    } else {
+      // 同步昵称
+      if (externalUser?.NickName && user.username !== externalUser.NickName) {
+        await User.updateUsername(user.id, externalUser.NickName);
+        user.username = externalUser.NickName;
+      }
+      // 自动升级为管理员
+      if (isShowzAdminEmail(email) && user.role !== 'admin') {
+        await User.updateRole(user.id, 'admin');
+        user.role = 'admin';
+      }
     }
 
-    // 6. （可选）快速校验订单号是否存在（不返回详情、不阻塞登录）
+    // 7. 快速校验订单号是否存在（不阻塞登录）
     if (orderNo) {
       try {
         const orderData = await getOrderByNo(orderNo);
@@ -87,14 +104,14 @@ async function autoLogin(req, res) {
       }
     }
 
-    // 7. 生成 JWT Token
+    // 8. 生成 JWT Token
     const token = generateToken({
       id: user.id,
       email: user.email,
       role: user.role
     });
 
-    // 8. 记录登录日志
+    // 9. 记录登录日志
     await User.logLogin({
       userId: user.id,
       email: user.email,
@@ -104,9 +121,9 @@ async function autoLogin(req, res) {
       status: 'success'
     });
 
-    console.log(`✅ 免登录跳转成功: ${email} → 订单: ${orderNo || '未指定'}`);
+    console.log(`✅ 免登录跳转成功: ${email} → 订单: ${orderNo || '未指定'} → adminId: ${resolvedAdminId}`);
 
-    // 9. 返回成功响应
+    // 10. 返回成功响应（adminId 由后端自动解析，不再由前端 URL 传入）
     return res.json({
       success: true,
       message: '验证成功',
@@ -119,7 +136,7 @@ async function autoLogin(req, res) {
           role: user.role
         },
         orderNo: orderNo || null,
-        adminId: adminId ? Number(adminId) : null
+        adminId: resolvedAdminId  // 后端自动从外部 API 解析出来的管理员ID
       }
     });
 
